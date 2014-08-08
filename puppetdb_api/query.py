@@ -17,6 +17,9 @@ class Query(object):
     def fact_query(self):
         raise NotImplementedError(self.fact_query.__name__)
 
+    def resource_query(self):
+        raise NotImplementedError(self.fact_query.__name__)
+
     def name_value_query(self):
         raise NotImplementedError(self.name_value_query.__name__)
 
@@ -34,7 +37,10 @@ class BooleanOperator(Query):
         return self._generic_query(self.node_query.__name__)
 
     def fact_query(self):
-        return self._generic_query(self.node_query.__name__)
+        return self._generic_query(self.fact_query.__name__)
+
+    def resource_query(self):
+        return self._generic_query(self.resource_query.__name__)
 
 
 class Not(BooleanOperator):
@@ -63,6 +69,9 @@ class Node(Query):
     def fact_query(self):
         return '["%s","certname","%s"]' % (self.operator, self.name)
 
+    def resource_query(self):
+        return '["%s","certname","%s"]' % (self.operator, self.name)
+
 
 class Fact(Query):
     def __init__(self, name, value, operator='='):
@@ -78,14 +87,33 @@ class Fact(Query):
                                       'certname',
                                       'certname')
 
+    def resource_query(self):
+        return self.generate_subquery('select_facts',
+                                      'certname',
+                                      'certname')
+
     def name_value_query(self):
         return '["and",' \
                '["=","name","%s"],' \
                '["%s","value","%s"]]' % (self.name, self.operator, self.value)
 
 
-class Resources(Query):
-    def __init__(self, resource_type, resource_title, exported=False, operator='='):
+class FactSelector(Fact):
+    def __init__(self, name):
+        super(FactSelector, self).__init__(name, '.*', '~')
+
+    def node_query(self):
+        raise NotImplementedError(self.node_query.__name__)
+
+    def fact_query(self):
+        return self.name_value_query()
+
+    def resource_query(self):
+        raise NotImplementedError(self.fact_query.__name__)
+
+
+class Resource(Query):
+    def __init__(self, resource_type, resource_title, operator='=', exported=False):
         self.type = resource_type
         self.title = resource_title
         self.exported = exported
@@ -109,3 +137,22 @@ class Resources(Query):
         return self.generate_subquery('select_resources',
                                       'certname',
                                       'certname')
+
+    def resource_query(self):
+        return self.generate_subquery('select_resources',
+                                      'certname',
+                                      'certname')
+
+
+class ResourceSelector(Resource):
+    def __init__(self, resource_type, exported=False):
+        super(ResourceSelector, self).__init__(resource_type, '.*', '~', exported)
+
+    def node_query(self):
+        raise NotImplementedError(self.node_query.__name__)
+
+    def fact_query(self):
+        raise NotImplementedError(self.fact_query.__name__)
+
+    def resource_query(self):
+        return self.name_value_query()

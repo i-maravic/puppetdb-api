@@ -1,7 +1,7 @@
 import requests
 
 from urlparse import urljoin
-from query import And, Or, Fact
+from query import And, Or, FactSelector
 
 
 class PuppetDB(object):
@@ -39,19 +39,16 @@ class PuppetDB(object):
 
         return extract_names_from_json(response.json())
 
-    # TODO Odraditi kako treba do kraja!!!
     def facts(self, facts=None, query=None):
 
-        nodes_url = urljoin(self.puppetdb_addr, self.API_VERSION + '/facts')
+        facts_url = urljoin(self.puppetdb_addr, self.API_VERSION + '/facts')
 
         facts_query = None
         if facts:
-            facts_query = Or(*[Fact(fact) for fact in facts])
+            facts_query = Or(*[FactSelector(fact) for fact in facts])
 
-        if query and facts_query:
-            facts_query = And(facts_query, query)
         if query:
-            facts_query = query
+            facts_query = And(facts_query, query) if facts_query else query
 
         def create_query_dict():
             if facts_query:
@@ -59,12 +56,18 @@ class PuppetDB(object):
             return None
 
         facts_params = create_query_dict()
-        response = self.session.get(nodes_url,
+        response = self.session.get(facts_url,
                                     params=facts_params,
                                     cert=self.cert,
                                     timeout=self.timeout)
 
-        def extract_names_from_json(json_res):
-            return [i['name'] for i in json_res]
+        def extract_fact_dict_from_json(json_res):
+            facts = {}
+            for fact in json_res:
+                fact_dict = facts.get(fact['name'], {})
+                fact_dict[fact['certname']] = fact['value']
+                facts[fact['name']] = fact_dict
 
-        return extract_names_from_json(response.json())
+            return facts
+
+        return extract_fact_dict_from_json(response.json())
