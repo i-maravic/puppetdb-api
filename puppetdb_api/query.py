@@ -1,6 +1,6 @@
 class Query(object):
 
-    def generate_subquery(self,
+    def _generate_subquery(self,
                           subquery_statement,
                           extract_field,
                           in_field):
@@ -9,19 +9,19 @@ class Query(object):
                '["%s",%s]]]' % (in_field,
                                 extract_field,
                                 subquery_statement,
-                                self.name_value_query())
+                                self._name_value_query())
 
     def node_query(self):
-        raise NotImplementedError(self.node_query.__name__)
+        raise TypeError(self.node_query.__name__ + ' on ' + Query.__name__)
 
     def fact_query(self):
-        raise NotImplementedError(self.fact_query.__name__)
+        raise TypeError(self.fact_query.__name__ + ' on ' + Query.__name__)
 
     def resource_query(self):
-        raise NotImplementedError(self.fact_query.__name__)
+        raise TypeError(self.resource_query.__name__ + ' on ' + Query.__name__)
 
-    def name_value_query(self):
-        raise NotImplementedError(self.name_value_query.__name__)
+    def _name_value_query(self):
+        raise TypeError(self._name_value_query.__name__ + ' on ' + Query.__name__)
 
 
 class BooleanOperator(Query):
@@ -83,16 +83,12 @@ class Fact(Query):
         return '["%s",["fact","%s"],"%s"]' % (self.operator, self.name, self.value)
 
     def fact_query(self):
-        return self.generate_subquery('select_facts',
-                                      'certname',
-                                      'certname')
+        return self._generate_subquery('select-facts', 'certname', 'certname')
 
     def resource_query(self):
-        return self.generate_subquery('select_facts',
-                                      'certname',
-                                      'certname')
+        return self._generate_subquery('select-facts', 'certname', 'certname')
 
-    def name_value_query(self):
+    def _name_value_query(self):
         return '["and",' \
                '["=","name","%s"],' \
                '["%s","value","%s"]]' % (self.name, self.operator, self.value)
@@ -103,56 +99,50 @@ class FactSelector(Fact):
         super(FactSelector, self).__init__(name, '.*', '~')
 
     def node_query(self):
-        raise NotImplementedError(self.node_query.__name__)
+        raise TypeError(self.node_query.__name__ + ' on ' + FactSelector.__name__)
 
     def fact_query(self):
-        return self.name_value_query()
+        return self._name_value_query()
 
     def resource_query(self):
-        raise NotImplementedError(self.fact_query.__name__)
+        raise TypeError(self.resource_query.__name__ + ' on ' + FactSelector.__name__)
 
 
 class Resource(Query):
-    def __init__(self, resource_type, resource_title, operator='=', exported=False):
-        self.type = resource_type
+    def __init__(self, resource_type, resource_title, operator='='):
+        self.exported = resource_type.startswith('@@')
+        self.type = resource_type if not self.exported else resource_type.replace('@@', '', 1)
         self.title = resource_title
-        self.exported = exported
         self.operator = operator
 
-    def name_value_query(self):
+    def node_query(self):
+        return self._generate_subquery('select-resources', 'certname', 'name')
+
+    def fact_query(self):
+        return self._generate_subquery('select-resources', 'certname', 'certname')
+
+    def resource_query(self):
+        return self._generate_subquery('select-resources', 'certname', 'certname')
+
+    def _name_value_query(self):
         return '["and",' \
                '["=","type","%s"],' \
                '["%s","title","%s"],' \
                '["=","exported",%s]]' % (self.type,
                                          self.operator,
                                          self.title,
-                                         str(self.exported).lower)
-
-    def node_query(self):
-        return self.generate_subquery('select_resources',
-                                      'certname',
-                                      'name')
-
-    def fact_query(self):
-        return self.generate_subquery('select_resources',
-                                      'certname',
-                                      'certname')
-
-    def resource_query(self):
-        return self.generate_subquery('select_resources',
-                                      'certname',
-                                      'certname')
+                                         str(self.exported).lower())
 
 
 class ResourceSelector(Resource):
-    def __init__(self, resource_type, exported=False):
-        super(ResourceSelector, self).__init__(resource_type, '.*', '~', exported)
+    def __init__(self, resource_type):
+        super(ResourceSelector, self).__init__(resource_type, '.*', '~')
 
     def node_query(self):
-        raise NotImplementedError(self.node_query.__name__)
+        raise TypeError(self.node_query.__name__ + ' on ' + ResourceSelector.__name__)
 
     def fact_query(self):
-        raise NotImplementedError(self.fact_query.__name__)
+        raise TypeError(self.fact_query.__name__ + ' on ' + ResourceSelector.__name__)
 
     def resource_query(self):
-        return self.name_value_query()
+        return self._name_value_query()
