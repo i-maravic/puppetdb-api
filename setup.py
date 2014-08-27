@@ -3,7 +3,7 @@
 # Copyright (c) 2014 Igor Maravić
 
 import setuptools
-__VERSION__ = '1.1-dev'
+__VERSION__ = '1.1'
 
 with open('README.rst') as f:
     readme = f.read()
