@@ -3,7 +3,11 @@
 # Copyright (c) 2014 Igor Maravić
 
 import setuptools
-__VERSION__ = '1.0'
+__VERSION__ = '1.1-dev'
+
+with open('README.rst') as f:
+    readme = f.read()
+
 setuptools.setup(
     name='puppetdb_api',
     author='Igor Maravić',
@@ -15,6 +19,7 @@ setuptools.setup(
     packages=['puppetdb_api'],
     requires=['requests', 'unittest2', 'httpmock'],
     license='Apache 2.0',
+    long_description=readme,
     classifiers=(
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
